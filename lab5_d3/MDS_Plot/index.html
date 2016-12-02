@@ -35,6 +35,50 @@ MDS Euclidian Distance
       <p id="g"></p>
     </div>
   </div>
+
+    <div class="row">
+    <div class="col-md-12 text-center">
+      <table id ="tab"  class="table">
+      <tbody >
+      <tr>
+        <th>
+        Name
+        </th>
+        <th>
+        Generation
+        </th>
+        <th>
+        Legendary
+        </th>
+        <th>
+        Total
+        </th>
+        <th>
+        Sp. Atk
+        </th>
+        <th>
+        Sp. Def
+        </th>
+        <th>
+        Defense
+        </th>
+        <th>
+        Attack
+        </th>
+        <th>
+        HP
+        </th>
+        <th>
+        Speed
+        </th>
+        <th>
+        Type
+        </th>
+      </tr>
+      </tbody>
+      </table>
+    </div>
+  </div>
   
 </div>
 
@@ -63,13 +107,18 @@ MDS Euclidian Distance
 
 <script>
 //This is basically just the scatter plot
-
+global_data = null;
+d3.csv("pokemon_processed.csv", function(data) {
+  global_data = data;
+});
   
 d3.csv("euclidean_mds.csv", function(data) {
-    
+    var i = 0;
     data.forEach(function(d){
       d.x = +d["Column1"];
       d.y = +d["Column2"];
+      d.index = i;
+      i++;
     });
   
      var margin = { top: 20, right: 20, bottom: 30, left: 50 };
@@ -128,7 +177,7 @@ d3.csv("euclidean_mds.csv", function(data) {
 
 
 
-
+   var selected_points = [];
    function brushed() {
          var s = d3.event.selection,
              x0 = s[0][0],
@@ -136,11 +185,14 @@ d3.csv("euclidean_mds.csv", function(data) {
              dx = s[1][0] - x0,
              dy = s[1][1] - y0;
          // console.log(s);
-
+         selected_points.length = 0;
          svg.selectAll('circle')
             .style("fill", function (d) {
                 if (x(d.x) >= x0 && x(d.x) <= x0 + dx && y(d.y) >= y0 && y(d.y) <= y0 + dy)
-                     { return "red"; }
+                     {
+                      console.log(d.index);
+                      selected_points.push(d.index);
+                      return "red"; }
                 else { return "black"; }
             });
      }
@@ -153,6 +205,52 @@ d3.csv("euclidean_mds.csv", function(data) {
                .ease(d3.easeLinear)
                .style("fill", "black");
          }
+        types = ['Normal', 'Grass', 'Fire', 'Water', 'Fighting'
+              ,'Flying', 'Poison', 'Ground', 'Rock', 'Bug', 'Ghost',
+              'Electric', 'Psychic', 'Ice', 'Dragon', 'Dark', 'Steel', 'Fairy'];
+
+        var table = $("#tab");
+        $("#tab tr").remove();
+      table.append('<tr>'+ '<th>' + 'Name' + '</th>' + '<th>' + 
+    'Generation'  
+    + '</th>'   +
+    '<th>' +'Legendary'+'</th>'+'<th>'
+    +'Total'+'</th>'+'<th>'+'Sp. Atk'+ '</th>'+
+        '<th>'+
+        'Sp. Def'+
+        '</th>'+
+        '<th>'+
+        'Defense'+
+        '</th>'+
+        '<th>'+
+        'Attack'+
+        '</th>'+
+        '<th>'+
+        'HP'+
+        '</th>'+
+        '<th>'+
+        'Speed'+
+        '</th>'+
+        '<th>'+
+        'Type'+
+        '</th>'+
+      '</tr>');
+        for (var i =0; i<selected_points.length;i++){
+                    table.append('<tr>'+ "<td>" + global_data[selected_points[i]]['Name'] + "</td>"  
+              + "<td>" + global_data[selected_points[i]]['Generation'] + "</td>"
+              + "<td>" + global_data[selected_points[i]]['Legendary'] + "</td>"
+              + "<td>" + global_data[selected_points[i]]['Total'] + "</td>"
+              + "<td>" + global_data[selected_points[i]]['Sp. Atk'] + "</td>"
+              + "<td>" + global_data[selected_points[i]]['Sp. Def'] + "</td>"
+              + "<td>" + global_data[selected_points[i]]['Defense'] + "</td>"
+              + "<td>" + global_data[selected_points[i]]['Attack'] + "</td>"
+              + "<td>" + global_data[selected_points[i]]['HP'] + "</td>"
+              + "<td>" + global_data[selected_points[i]]['Speed'] + "</td>"
+              + "<td>" + types[parseInt(global_data[selected_points[i]]['Type 1'])] + "</td>"
+            + '</tr>');
+        }
+
+
      }
 
 });
