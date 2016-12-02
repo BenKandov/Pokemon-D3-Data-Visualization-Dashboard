@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>
+MDS Euclidian Distance
+</title>
+<script src="//d3js.org/d3.v4.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+
+</head>
+
+<body>
+
+
+
+
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-12 text-center">
+      <h1> Euclidean MDS Plot </h1>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-12 text-center">
+      <p id="g"></p>
+    </div>
+  </div>
+  
+</div>
+
+
+<footer class="footer">
+  <div class="container">
+    <div class="row">
+      <div class="col-md-3">
+        <a href=""> Euclidean MDS Plot </a>
+      </div>
+      <div class="col-md-3">
+        <a href="../Parallel_Coordinates"> Parallel Coordinates </a>
+      </div>
+       <div class="col-md-3">
+        <a href="../5x5_Scatterplot"> 5x5 Scatterplot Matrix  </a>
+      </div>
+      <div class="col-md-3">
+        <a href="../Scatterplot"> Bivariate Scatterplot </a>
+      </div>
+    </div>
+  </div>
+ </footer>
+
+</body>
+
+
+<script>
+//This is basically just the scatter plot
+
+  
+d3.csv("euclidean_mds.csv", function(data) {
+    
+    data.forEach(function(d){
+      d.x = +d["Column1"];
+      d.y = +d["Column2"];
+    });
+  
+     var margin = { top: 20, right: 20, bottom: 30, left: 50 };
+     width = 800 - margin.left - margin.right,
+     height = 400 - margin.top - margin.bottom;
+     
+     var x = d3.scaleLinear()
+         .range([0, width]);
+
+     var y = d3.scaleLinear()
+         .range([height, 0]);
+
+     var xAxis = d3.axisBottom(x).ticks(12),
+         yAxis = d3.axisLeft(y).ticks(12 * height / width);
+
+     var svg = d3.select("#g").append("svg")
+              .attr("id", "g_svg")
+              .attr("data-margin-right", margin.right)
+              .attr("data-margin-left", margin.left)
+              .attr("data-margin-top", margin.top)
+              .attr("data-margin-bottom", margin.bottom)
+              .attr("width", width + margin.left + margin.right)
+              .attr("height", height + margin.top + margin.bottom)
+              .append("g")
+              .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+     x.domain(d3.extent(data, function (d) { return d.x; })).nice();
+     y.domain(d3.extent(data, function (d) { return d.y; })).nice();
+
+     svg.append("g")
+     .attr("class", "x axis ")
+     .attr('id', "axis--x")
+     .attr("transform", "translate(0," + height + ")")
+     .call(xAxis);
+
+
+     var point = svg.selectAll(".point")
+         .data(data)
+       .enter().append("circle")
+         .attr("class", "point")
+         .attr("r", 5)
+         .attr("cx", function (d) { return x(d.x); })
+         .attr("cy", function (d) { return y(d.y); })
+         .attr("opacity", 0.5)
+         .style("fill", "black");
+
+     svg.append("g")
+         .attr("class", "y axis")
+         .attr('id', "axis--y")
+         .call(yAxis);
+
+
+     svg.append("g")
+      .call(d3.brush().extent([[0, 0], [width, height]]).on("brush", brushed).on("end", brushended));
+
+
+
+
+
+   function brushed() {
+         var s = d3.event.selection,
+             x0 = s[0][0],
+             y0 = s[0][1],
+             dx = s[1][0] - x0,
+             dy = s[1][1] - y0;
+         // console.log(s);
+
+         svg.selectAll('circle')
+            .style("fill", function (d) {
+                if (x(d.x) >= x0 && x(d.x) <= x0 + dx && y(d.y) >= y0 && y(d.y) <= y0 + dy)
+                     { return "red"; }
+                else { return "black"; }
+            });
+     }
+
+     function brushended() {
+         if (!d3.event.selection) {
+             svg.selectAll('circle')
+               .transition()
+               .duration(800)
+               .ease(d3.easeLinear)
+               .style("fill", "black");
+         }
+     }
+
+});
+
+
+
+
+//get_and_use_data("Column1","Column2","euclidean_mds.csv");
+
+
+
+
+
+
+
+
+
+
+</script>
+
+</html>
