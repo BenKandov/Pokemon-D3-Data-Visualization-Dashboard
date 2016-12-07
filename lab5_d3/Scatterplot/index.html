@@ -89,16 +89,33 @@ VS
 	position: absolute;
 	top:35%;
 }
+.brush .extent{
+	stroke: #fff;
+	fill : gray;
+	fill-opacity: .255;
+}
+
+.zoom {
+  cursor: move;
+  fill: none;
+  pointer-events: all;
+}
+
 </style>
 
 
 
 <script>
 
+var global_data = null;
+var attr1 = null;
+var attr2 = null;
 function get_and_use_data(attr1, attr2, file){
 
 	d3.csv(file, function(data){
+		global_data = data;
 		make_scatter_plot(attr1, attr2, data);
+
 
 	});
 
@@ -140,6 +157,8 @@ function calculate_min(data,column){
 
 function make_scatter_plot(attr1, attr2, data){
 	d3.selectAll("svg > *").remove();
+	attr1 = attr1;
+	attr2 = attr2;
 
 //init the div on which we put the axis/scatterplot
 	var height = 500;
@@ -213,10 +232,12 @@ function make_scatter_plot(attr1, attr2, data){
 
 
 	var brush = d3.svg.brush()
-		.x(xAxis)
-		.y(yAxis);
+		.x(xAxisScale)
+		.y(yAxisScale)
+		.on('brush', highlight);
+		//.on('brushend', finishBrush);
 
-	
+		
 	//let's get down to plotting the data!!
 	svgContainer.selectAll(".dot")
 		.data(data)
@@ -226,13 +247,39 @@ function make_scatter_plot(attr1, attr2, data){
 			.attr("cx", xMap)
 			.style("opacity",.7)
 			.style("fill", dotColor)
-			.attr("cy",yMap);
+			.attr("cy",yMap);	
+
+	svgContainer.append("g")
+		.attr("class","brush")
+		.call(brush);
 
 
+	var zoom = d3.behavior.zoom()
+    .on("zoom", draw);
 
-
-
-
+	//var selected_points = [];
+	function highlight(){
+		var brush = d3.event.target;
+		var extent = brush.extent();
+		var x0 = extent[0][0],
+		y0 = extent[0][1],
+		dx = extent[1][0] - x0,
+		dy = extent[1][1] - y0;
+	/**
+		for(var i =0; i<global_data.length;i++){
+		 if (xAxisScale(global_data[i][attr1]) >= x0 && xAxisScale(global_data[i][attr1]) <= x0 
+		 	+ dx && yAxisScale(global_data[i][attr2]) >= y0 && yAxisScale(global_data[i][attr2]) <= y0 + dy)
+             {
+             	console.log("hey");
+             	selected_points.push(global_data[i]['#']);
+             	console.log(selected_points);
+             }
+		
+		}
+		
+	
+	**/
+	}
 
 
 }
