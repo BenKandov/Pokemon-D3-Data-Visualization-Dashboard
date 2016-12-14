@@ -143,7 +143,14 @@ var mds_filter = null;
 var pca_filter = null;
 var scatterplot_filter = null;
 
+var parallel_coordinates_hide = null;
+var mds_hide = null;
+var scatterplot_hide = null;
 
+
+
+var mds_enlarge = null;
+var pca_enlarge = null;
 
 
 function MDS(){
@@ -234,7 +241,8 @@ function make_scatter_plot(attr1, attr2, data){
 	var brush = d3.svg.brush()
 		.x(xAxisScale)
 		.y(yAxisScale)
-		.on('brush', highlight);
+		.on('brush', highlight)
+		.on('brushend', finishBrush);
 
 	//plots into svg container
 	svgContainer.selectAll(".dot")
@@ -251,28 +259,70 @@ function make_scatter_plot(attr1, attr2, data){
 		.attr("class","brush")
 		.call(brush);
 
-		function highlight(){
+
+	function finishBrush(){
+		pca_filter();
+		scatterplot_filter();
+	}
+
+	function highlight(){
 				var brush = d3.event.target;
 				var extent = brush.extent();
 				var x0 = extent[0][0],
 				y0 = extent[0][1],
 				dx = extent[1][0] - x0,
 				dy = extent[1][1] - y0;
-
+		selected_points = [];
 		svgContainer.selectAll("circle")
-			.style("fill", function(d){
+
+			.style("visibility", function(d,i){
 				if (d["Column1"] >= x0 && d["Column1"] <= x0 + dx && d["Column2"] >= y0 
-						&& d["Column2"] <= y0 + dy){					
-						return "red";
+						&& d["Column2"] <= y0 + dy){	
+						selected_points.push(i);				
+						return "visible";
 					}else{					
+						return "hidden";
+					}
+			});
+	}
+		
+		mds_highlight = function(){
+
+			svgContainer.selectAll("circle")
+				.style("fill",function(d, i){
+					
+					if(selected_points.indexOf(i) >= 0  ){
+						
+						return "red";
+					}else{
 						return "black";
 					}
 				});
-		}
-		function highlightToCall(){
-			
-		}
-
+		};
+		mds_hide = function(){
+			svgContainer.selectAll("circle")
+				.style("visibility",function(d,i){
+					
+					if(selected_points.indexOf(i) >= 0  ){
+						
+						return "hidden";
+					}else{
+						return "visible";
+					}
+				});
+		};
+		mds_enlarge = function(){
+			svgContainer.selectAll("circle")
+				.attr("r",function(d,i){
+					
+					if(selected_points.indexOf(i) >= 0  ){
+						
+						return 5;
+					}else{
+						return 3;
+					}
+				});
+		};
 
 
 	}
@@ -281,7 +331,184 @@ get_and_use_data("Column1","Column2","euclidean_mds.csv");
 }	
 
 
-//MDS();
+function pcaplot(){
+
+function get_and_use_data(attr1, attr2, file){
+
+	d3.csv(file, function(data){
+		make_scatter_plot(attr1, attr2, data);
+
+	});
+
+}
+
+function calculate_max(data,column){
+	var max = 0;
+	for(var i = 0; i < data.length; i++){		
+		if ( parseFloat(data[i][column],10) > max){			
+			max = data[i][column];
+		}		
+	}
+	return max;
+}
+
+
+function calculate_min(data,column){
+	var min = 100000000;
+	for(var i = 0; i<data.length; i++){		
+		if( parseFloat(data[i][column],10) < min){
+			min = data[i][column];
+		}
+	}
+	return min;
+}
+
+
+function make_scatter_plot(attr1, attr2, data){
+	//d3.selectAll("svg > *").remove();
+	d3.select("#pcaSvg").remove();
+	//init container 
+	var height = 300;
+	var width = 300;
+	var svgContainer = d3.select("#pcaplot").append("svg")
+						.attr("class","pcaSvg")
+						.attr("width", width)
+						.attr("height", height);
+
+
+	//X Axis
+	var xAxisScale = d3.scale.linear()
+					.domain([calculate_min(data,attr1), calculate_max(data,attr1)])
+					.range([0,width])
+	var xMap = function(d){
+		return xAxisScale(d[attr1])
+	};
+
+	var xAxis = d3.svg.axis()
+					.scale(xAxisScale)
+					.orient("bottom")
+					.ticks(5);
+
+	//Y Axis
+	var yAxisScale = d3.scale.linear()
+					.domain([calculate_min(data,attr2), calculate_max(data,attr2)])
+					.range([height-100,0]);
+
+	var yMap = function(d){
+		return yAxisScale(d[attr2]);
+	}
+	
+	var yAxis = d3.svg.axis()
+					.scale(yAxisScale)
+					.orient("right")
+					.ticks(5);
+	var xAxisGroup = svgContainer.append("g")
+					.attr("class","axisX")
+					
+					.attr("transform", "translate(0, "+ (height-100) + ")")
+					.call(xAxis);
+	
+
+	var yAxisGroup = svgContainer.append("g")
+					.attr("class","axisY")
+
+					.call(yAxis);
+
+	var brush = d3.svg.brush()
+		.x(xAxisScale)
+		.y(yAxisScale)
+		.on('brush', highlight)
+		.on('brushend', finishBrush);;
+
+	//plots into svg container
+	svgContainer.selectAll(".dot")
+		.data(data)
+		.enter().append("circle")
+			.attr("r",3)
+			.attr("class","dot")
+			.attr("cx",xMap)
+			.style("opacity",.9)
+			.style("fill","black")
+			.attr("cy", yMap);
+
+	svgContainer.append("g")
+		.attr("class","brush")
+		.call(brush);
+
+	function finishBrush(){
+
+		scatterplot_hide();
+		mds_hide();
+		//parallel_coordinates_hide();
+
+	}
+
+	function highlight(){
+		var brush = d3.event.target;
+		var extent = brush.extent();
+		var x0 = extent[0][0],
+		y0 = extent[0][1],
+		dx = extent[1][0] - x0,
+		dy = extent[1][1] - y0;
+		selected_points = [];
+		svgContainer.selectAll("circle")
+			.style("visibility", function(d,i){
+				if (d["Column1"] >= x0 && d["Column1"] <= x0 + dx && d["Column2"] >= y0 
+						&& d["Column2"] <= y0 + dy){	
+						selected_points.push(i);
+						return "hidden";				
+						//return "red";
+					}else{		
+						return "visible";			
+						//return "black";
+					}
+				});
+}
+	pca_highlight = function(){
+
+			svgContainer.selectAll("circle")
+				.style("fill",function(d, i){
+					
+					if(selected_points.indexOf(i) >= 0  ){
+						
+						return "red";
+					}else{
+						return "black";
+					}
+				});
+	};
+	pca_filter = function(){
+
+			svgContainer.selectAll("circle")
+				.style("visibility",function(d, i){
+					
+					if(selected_points.indexOf(i) >= 0  ){						
+						return "visible";
+					}else{
+						return "hidden";
+					}
+				});
+	};
+
+	pca_enlarge = function(){
+			svgContainer.selectAll("circle")
+				.attr("r",function(d,i){
+					
+					if(selected_points.indexOf(i) >= 0  ){
+						
+						return 5;
+					}else{
+						return 3;
+					}
+				});
+	};
+
+
+
+}
+
+get_and_use_data("Column1","Column2","PCAd_Data.csv");
+}
 
 
 function parallel_coordinates(){
@@ -428,7 +655,18 @@ function path(d){
 		return [x(p), y[p](d[p])];
 	}));
 };
-
+		parallel_coordinates_hide = function(){
+			svg.selectAll(".foreground")
+				.style("visibility",function(d,i){
+					//console.log(i);
+					if(selected_points.indexOf(i) >= 0  ){
+						
+						return "hidden";
+					}else{
+						return "visible";
+					}
+				});
+		};
 
 
 function brushstart() {
@@ -489,6 +727,8 @@ function brushend(){
     	 }			
   	}
   	scatterplot_highlight();
+  	mds_highlight();
+  	pca_highlight();
 
 }
 // Handles a brush event, toggling the display of foreground lines.
@@ -509,131 +749,7 @@ function brush() {
 }
 
 
-function pcaplot(){
 
-function get_and_use_data(attr1, attr2, file){
-
-	d3.csv(file, function(data){
-		make_scatter_plot(attr1, attr2, data);
-
-	});
-
-}
-
-function calculate_max(data,column){
-	var max = 0;
-	for(var i = 0; i < data.length; i++){		
-		if ( parseFloat(data[i][column],10) > max){			
-			max = data[i][column];
-		}		
-	}
-	return max;
-}
-
-
-function calculate_min(data,column){
-	var min = 100000000;
-	for(var i = 0; i<data.length; i++){		
-		if( parseFloat(data[i][column],10) < min){
-			min = data[i][column];
-		}
-	}
-	return min;
-}
-
-
-function make_scatter_plot(attr1, attr2, data){
-	//d3.selectAll("svg > *").remove();
-	d3.select("#pcaSvg").remove();
-	//init container 
-	var height = 300;
-	var width = 300;
-	var svgContainer = d3.select("#pcaplot").append("svg")
-						.attr("class","pcaSvg")
-						.attr("width", width)
-						.attr("height", height);
-
-
-	//X Axis
-	var xAxisScale = d3.scale.linear()
-					.domain([calculate_min(data,attr1), calculate_max(data,attr1)])
-					.range([0,width])
-	var xMap = function(d){
-		return xAxisScale(d[attr1])
-	};
-
-	var xAxis = d3.svg.axis()
-					.scale(xAxisScale)
-					.orient("bottom")
-					.ticks(5);
-
-	//Y Axis
-	var yAxisScale = d3.scale.linear()
-					.domain([calculate_min(data,attr2), calculate_max(data,attr2)])
-					.range([height-100,0]);
-
-	var yMap = function(d){
-		return yAxisScale(d[attr2]);
-	}
-	
-	var yAxis = d3.svg.axis()
-					.scale(yAxisScale)
-					.orient("right")
-					.ticks(5);
-	var xAxisGroup = svgContainer.append("g")
-					.attr("class","axisX")
-					
-					.attr("transform", "translate(0, "+ (height-100) + ")")
-					.call(xAxis);
-	
-
-	var yAxisGroup = svgContainer.append("g")
-					.attr("class","axisY")
-
-					.call(yAxis);
-
-	var brush = d3.svg.brush()
-		.x(xAxisScale)
-		.y(yAxisScale)
-		.on('brush', highlight);
-	//plots into svg container
-	svgContainer.selectAll(".dot")
-		.data(data)
-		.enter().append("circle")
-			.attr("r",3)
-			.attr("class","dot")
-			.attr("cx",xMap)
-			.style("opacity",.9)
-			.style("fill","black")
-			.attr("cy", yMap);
-
-	svgContainer.append("g")
-		.attr("class","brush")
-		.call(brush);
-
-
-	function highlight(){
-		var brush = d3.event.target;
-		var extent = brush.extent();
-		var x0 = extent[0][0],
-		y0 = extent[0][1],
-		dx = extent[1][0] - x0,
-		dy = extent[1][1] - y0;
-		svgContainer.selectAll("circle")
-			.style("fill", function(d){
-				if (d["Column1"] >= x0 && d["Column1"] <= x0 + dx && d["Column2"] >= y0 
-						&& d["Column2"] <= y0 + dy){					
-						return "red";
-					}else{					
-						return "black";
-					}
-				});
-
-}
-}
-
-get_and_use_data("Column1","Column2","PCAd_Data.csv");
-}
 
 
 
@@ -650,7 +766,7 @@ function get_and_use_data(attr1, attr2, file){
 
 	d3.csv(file, function(data){
 		global_data = data;
-		console.log(global_data);
+	
 		make_scatter_plot(attr1, attr2, data);
 
 
@@ -770,8 +886,8 @@ function make_scatter_plot(attr1, attr2, data){
 	var brush = d3.svg.brush()
 		.x(xAxisScale)
 		.y(yAxisScale)
-		.on('brush', highlight);
-		//.on('brushend', finishBrush);
+		.on('brush', highlight)
+		.on('brushend', finishBrush);
 
 		
 	//let's get down to plotting the data!!
@@ -789,19 +905,51 @@ function make_scatter_plot(attr1, attr2, data){
 		.attr("class","brush")
 		.call(brush);
 
+
+	function finishBrush(){
+		mds_enlarge();
+		pca_enlarge();
+	}
+
 	scatterplot_highlight = function(){
-			console.log(selected_points);
+			
 			svgContainer.selectAll("circle")
 				.style("fill",function(d){
 					
 					if(selected_points.indexOf( parseInt(d["Number"])) >= 0  ){
 						
 						return "red";
+					}else{
+						return "black";
 					}
 				});
 
 		
 	};	
+	scatterplot_hide = function(){
+			svgContainer.selectAll("circle")
+				.style("visibility",function(d){
+					
+					if(selected_points.indexOf( parseInt(d["Number"])) >= 0  ){
+						
+						return "hidden";
+					}else{
+						return "visible";
+					}
+				});
+	};
+	scatterplot_filter = function(){
+			svgContainer.selectAll("circle")
+				.style("visibility",function(d){
+					
+					if(selected_points.indexOf( parseInt(d["Number"])) >= 0  ){
+						
+						return "visible";
+					}else{
+						return "hidden";
+					}
+				});
+	};
 
 
 	//var selected_points = [];
@@ -813,15 +961,16 @@ function make_scatter_plot(attr1, attr2, data){
 		dx = extent[1][0] - x0,
 		dy = extent[1][1] - y0;
 
-
+		selected_points = [];
 		svgContainer.selectAll("circle")
-			.style("fill", function(d){
-			
+			.attr("r", function(d,i){
+				
 				if (d[attr1] >= x0 && d[attr1] <= x0 + dx && d[attr2] >= y0 
-					&& d[attr2] <= y0 + dy){					
-					return "red";
+					&& d[attr2] <= y0 + dy){		
+					selected_points.push(i);			
+					return 5;
 				}else{					
-					return dotColor(d);
+					return 3;
 				}
 
 			});
