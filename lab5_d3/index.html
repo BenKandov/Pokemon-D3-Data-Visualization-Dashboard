@@ -126,6 +126,11 @@ svg{
 
 <script type="text/javascript">
 
+//Let's keep an array of selected points in a brush
+selected_points = [] 
+
+
+
 //Define our brushing functions as global variables here
 
 var parallel_coordinates_highlight = null;
@@ -264,6 +269,12 @@ function make_scatter_plot(attr1, attr2, data){
 					}
 				});
 		}
+		function highlightToCall(){
+			
+		}
+
+
+
 	}
 
 get_and_use_data("Column1","Column2","euclidean_mds.csv");
@@ -457,8 +468,10 @@ function brushend(){
 				'Type'+
 				'</th>'+
 			'</tr>');
+   selected_points = [];
   	for (var i =0; i < foreground[0].length; i++){
      	if (foreground[0][i]['style']['display'] != "none"){
+     		selected_points.push(i);
      	    table.append('<tr>'+ "<td>" + global_data[i]['Name'] + "</td>"  
      	    		+ "<td>" + global_data[i]['Generation'] + "</td>"
      	    		+ "<td>" + global_data[i]['Legendary'] + "</td>"
@@ -475,6 +488,7 @@ function brushend(){
      
     	 }			
   	}
+  	scatterplot_highlight();
 
 }
 // Handles a brush event, toggling the display of foreground lines.
@@ -636,6 +650,7 @@ function get_and_use_data(attr1, attr2, file){
 
 	d3.csv(file, function(data){
 		global_data = data;
+		console.log(global_data);
 		make_scatter_plot(attr1, attr2, data);
 
 
@@ -774,7 +789,19 @@ function make_scatter_plot(attr1, attr2, data){
 		.attr("class","brush")
 		.call(brush);
 
+	scatterplot_highlight = function(){
+			console.log(selected_points);
+			svgContainer.selectAll("circle")
+				.style("fill",function(d){
+					
+					if(selected_points.indexOf( parseInt(d["Number"])) >= 0  ){
+						
+						return "red";
+					}
+				});
 
+		
+	};	
 
 
 	//var selected_points = [];
@@ -789,7 +816,7 @@ function make_scatter_plot(attr1, attr2, data){
 
 		svgContainer.selectAll("circle")
 			.style("fill", function(d){
-
+			
 				if (d[attr1] >= x0 && d[attr1] <= x0 + dx && d[attr2] >= y0 
 					&& d[attr2] <= y0 + dy){					
 					return "red";
